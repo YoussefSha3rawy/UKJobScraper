@@ -24,32 +24,65 @@ def is_excluded_job(job_title):
     return False
 
 
-def save_suitable_job(job_url, job_title, job_info=None):
-    """Save a suitable job to the CSV output file"""
+def load_existing_jobs():
+    """Load existing jobs from CSV to check for duplicates"""
     import csv
     import os
-    from datetime import datetime
 
-    # Prepare row data
+    existing_jobs = set()
+
+    if os.path.exists(Config.OUTPUT_FILE):
+        try:
+            with open(Config.OUTPUT_FILE, "r", newline="",
+                      encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    # Create a unique key from title and company
+                    job_key = (row.get('job_title',
+                                       '').strip(), row.get('company',
+                                                            '').strip())
+                    existing_jobs.add(job_key)
+        except Exception as e:
+            logger = setup_logger()
+            logger.warning(f"Error reading existing CSV file: {e}")
+
+    return existing_jobs
+
+
+def save_suitable_job(job_url, job_title, job_info=None):
+    """Save a suitable job to the CSV output file if it's not a duplicate"""
+    import csv
+    import os
+
+    # Load existing jobs to check for duplicates
+    existing_jobs = load_existing_jobs()
+
+    company = job_info.get('company', '') if job_info else ''
+    location = job_info.get('location', '') if job_info else ''
+
+    # Create job key for duplicate checking
+    job_key = (job_title.strip(), company.strip())
+
+    # Check if this job already exists
+    if job_key in existing_jobs:
+        logger = setup_logger()
+        logger.info(f"Skipping duplicate job: {job_title} at {company}")
+        return False
+
+    # Prepare simplified row data
     row_data = {
-        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'job_title': job_title,
+        'location': location,
         'job_url': job_url,
-        'company': job_info.get('company', '') if job_info else '',
-        'location': job_info.get('location', '') if job_info else '',
-        'date_posted': job_info.get('date_posted', '') if job_info else '',
-        'reason': job_info.get('reason', '') if job_info else '',
-        'raw_date_text': job_info.get('raw_date_text', '') if job_info else ''
+        'company': company,
+        'applied': ''  # Empty by default for user to fill in
     }
 
     # Check if file exists to determine if we need to write headers
     file_exists = os.path.exists(Config.OUTPUT_FILE)
 
     with open(Config.OUTPUT_FILE, "a", newline="", encoding="utf-8") as f:
-        fieldnames = [
-            'timestamp', 'job_title', 'job_url', 'company', 'location',
-            'date_posted', 'reason', 'raw_date_text'
-        ]
+        fieldnames = ['job_title', 'location', 'job_url', 'company', 'applied']
         writer = csv.DictWriter(f, fieldnames=fieldnames)
 
         # Write header if file is new
@@ -57,6 +90,8 @@ def save_suitable_job(job_url, job_title, job_info=None):
             writer.writeheader()
 
         writer.writerow(row_data)
+
+    return True
 
 
 def clean_text(text):

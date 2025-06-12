@@ -21,10 +21,7 @@ def main():
     logger.info(
         f"Date range: Jobs posted within last {Config.MAX_JOB_AGE_DAYS} days")
 
-    # Initialize CSV file with headers (the save function will handle this)
-    import os
-    if os.path.exists(Config.OUTPUT_FILE):
-        os.remove(Config.OUTPUT_FILE)  # Clear previous results
+    # Note: CSV file will be appended to, not overwritten
 
     # Initialize components
     scraper = JobScraper()
@@ -54,6 +51,7 @@ def main():
 
         suitable_jobs = []
         processed_count = 0
+        new_jobs_added = 0
 
         for i, job in enumerate(job_listings, 1):
             try:
@@ -96,9 +94,14 @@ def main():
                     job_with_reasoning['reason'] = reasoning
                     job_with_reasoning['application_url'] = application_url
 
-                    save_suitable_job(application_url, job['title'],
-                                      job_with_reasoning)
-                    suitable_jobs.append(job_with_reasoning)
+                    # Try to save the job (returns True if new, False if duplicate)
+                    if save_suitable_job(application_url, job['title'],
+                                         job_with_reasoning):
+                        suitable_jobs.append(job_with_reasoning)
+                        new_jobs_added += 1
+                        logger.info(f"✓ NEW JOB ADDED: {job['title']}")
+                    else:
+                        logger.info(f"✓ DUPLICATE SKIPPED: {job['title']}")
                 else:
                     logger.info(f"✗ Not suitable: {job['title']}")
 
@@ -117,12 +120,13 @@ def main():
         logger.info(f"Total jobs found: {len(job_listings)}")
         logger.info(f"Jobs processed: {processed_count}")
         logger.info(f"Suitable jobs found: {len(suitable_jobs)}")
+        logger.info(f"New jobs added to CSV: {new_jobs_added}")
         logger.info(f"Results saved to: {Config.OUTPUT_FILE}")
         logger.info("=" * 60)
 
         # Print suitable jobs summary
         if suitable_jobs:
-            print("\n🎉 SUITABLE JOBS FOUND:")
+            print(f"\n🎉 NEW SUITABLE JOBS FOUND: {new_jobs_added}")
             for job in suitable_jobs:
                 print(f"• {job['title']}")
                 # Show application URL if available, otherwise listing URL
@@ -133,6 +137,8 @@ def main():
                 if job.get('location'):
                     print(f"  Location: {job['location']}")
                 print()
+        elif new_jobs_added == 0:
+            print("\n📝 No new jobs found (all suitable jobs were duplicates)")
         else:
             print("\n😔 No suitable junior-level jobs found in this search.")
             print("Consider:")

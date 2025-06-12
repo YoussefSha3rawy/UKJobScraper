@@ -21,7 +21,9 @@ class Config:
     DELAY_BETWEEN_REQUESTS = float(os.getenv("DELAY_BETWEEN_REQUESTS", "2"))
 
     # Filtering keywords (jobs starting with these will be excluded)
-    EXCLUDED_KEYWORDS = ["senior", "staff", "lead", "principal", "head"]
+    EXCLUDED_KEYWORDS = [
+        "senior", "staff", "lead", "principal", "head", "lead"
+    ]
 
     # Date filtering settings (in days)
     MAX_JOB_AGE_DAYS = int(os.getenv(
