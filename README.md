@@ -1,3 +1,5 @@
+This project was vibe coded using GitHub Copilot Claude Sonnet 4.
+
 # UK Job Hunt - Software Engineering Jobs Scraper
 
 A Python application that searches for software engineering jobs on huntukvisasponsors.com, filters them for junior-level positions, and uses a local LLM to assess job suitability.
